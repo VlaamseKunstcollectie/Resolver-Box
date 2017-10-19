@@ -1,0 +1,10 @@
+---
+resolvers:
+  - {
+      user: resolver,
+      db: resolver,
+      db_user: resolver,
+      db_pass: resolver,
+      base_url: resolver.box,
+      server_name: "www.resolver.box resolver.box"
+    }

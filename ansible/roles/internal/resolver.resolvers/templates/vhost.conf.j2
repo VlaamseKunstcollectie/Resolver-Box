@@ -1,0 +1,17 @@
+server {
+  listen 80;
+  server_name  {{server_name}};
+
+  # Let's Encrypt fase 2
+  location /.well-known/acme-challenge/ {
+    rewrite ^/.well-known/acme-challenge/([^\/]*)$ https://sock.openminds.be/lets_encrypt/  redirect;
+  }
+
+  error_log  {{error_log}};
+  access_log  {{access_log}};
+
+  root   {{root}};
+  passenger_enabled on;
+}
+
+

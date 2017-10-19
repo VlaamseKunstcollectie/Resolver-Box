@@ -1,0 +1,41 @@
+---
+
+- name: resolvers.yml | All roles
+  hosts: local
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+
+    - name: Update apt
+      become: true
+      apt:
+        upgrade: yes
+        update_cache: yes
+        cache_valid_time: 86400
+
+    - name: Install System Packages
+      apt: pkg={{ item }} state=latest
+      with_items:
+        - pkg-config
+        - gnupg
+        - dirmngr
+        - curl
+        - ruby
+        - virtualenv
+        - python-dev
+        - python-pip
+        - libmysqlclient-dev
+
+  roles:
+    - { role: geerlingguy.git,                       tags: [ "git" ] }
+    - { role: geerlingguy.nginx,                     tags: [ "nginx" ] }
+    - { role: geerlingguy.mysql,                     tags: [ "mysql" ] }
+    - { role: resolver.passenger,                    tags: [ "passenger" ] }
+    - { role: resolver.resolvers,                    tags: [ "resolvers" ] }
+
+# Create users
+# Create install a resolver for each user
+# Create a mysql database for each user
+# create a vhost for each user
+# harden security

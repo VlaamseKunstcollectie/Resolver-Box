@@ -1,0 +1,56 @@
+user www-data;
+worker_processes  5;
+
+error_log  /var/log/nginx/error.log;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+    # multi_accept on;
+}
+
+worker_rlimit_nofile 25600;
+
+http {
+    include /etc/nginx/passenger.conf;
+
+    log_format combined-vhost
+        '$server_name $remote_addr - $remote_user [$time_local]  '
+        '"$request" $status $body_bytes_sent '
+        '"$http_referer" "$http_user_agent"'
+    ;
+
+    passenger_max_preloader_idle_time 3600;
+
+    include       /etc/nginx/mime.types;
+    index index.html index.htm index.php;
+
+    access_log  /var/log/nginx/access.log;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+    tcp_nodelay        on;
+
+    gzip  on;
+    gzip_disable "MSIE [1-6]\.(?!.*SV1)";
+    gzip_types text/plain text/css application/x-javascript ;
+
+    client_max_body_size 64M;
+    server_names_hash_bucket_size 1024;
+
+    server_tokens off;
+
+    proxy_buffer_size       16k;
+    proxy_buffers           4 32k;
+    proxy_busy_buffers_size 64k;
+    proxy_temp_file_write_size 64k;
+
+    server_name_in_redirect off;
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/extra.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}

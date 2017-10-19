@@ -1,0 +1,87 @@
+---
+# Create users
+
+- name: create user
+  user:
+    name: "{{ item.user }}"
+    shell: /bin/bash
+  with_items: "{{ resolvers }}"
+
+# Virtual Environment
+
+- name: Setup and pip install
+  pip:
+    requirements: "/vagrant/requirements.txt"
+    virtualenv: "/vagrant/venv"
+  with_items: "{{ resolvers }}"
+
+# Create a mysql database for each user
+
+- name: Create database for Groeningemuseum
+  mysql_db:
+    db: "{{ item.db }}"
+    state: present
+  with_items: "{{ resolvers }}"
+
+- name: Create database user
+  mysql_user:
+    name:  "{{ item.db_user }}"
+    password:  "{{ item.db_pass }}"
+    priv: "{{ item.db_user }}.*:ALL"
+    state: present
+  with_items: "{{ resolvers }}"
+
+# Configure the resolver
+
+- name: Copy Resolver configuration into place for each user
+  template:
+    src: resolver.cfg.j2
+    dest: "/vagrant/resolver.cfg"
+  vars:
+     base_url: "{{ item.base_url }}"
+     database_user: "{{ item.db_user }}"
+     database_pass: "{{ item.db_pass }}"
+     database_name: "{{ item.db }}"
+  with_items: "{{ resolvers }}"
+
+- name: Copy Resolver Passenger configuration into place
+  template:
+    src: passenger_wsgi.py.j2
+    dest: "/vagrant/passenger_wsgi.py"
+  vars:
+     base_dir: "/vagrant/"
+  with_items: "{{ resolvers }}"
+
+- name: Populate the database
+  shell:
+    chdir: "/vagrant"
+    cmd: |
+      . venv/bin/activate
+      python initialise.py
+  with_items: "{{ resolvers }}"
+
+# create a vhost for each user
+
+- name: Ensure nginx log directory exists.
+  file:
+    path: "/var/log/nginx/{{ item.user }}"
+    owner: www-data
+    group: www-data
+    mode: 0755
+    state: directory
+  with_items: "{{ resolvers }}"
+
+- name: Copy Resolver vhost configuration into place
+  template:
+    src: vhost.conf.j2
+    dest: "/etc/nginx/sites-enabled/resolver_{{ item.user }}.conf"
+  vars:
+     server_name: "{{ item.server_name }}"
+     error_log: "/var/log/nginx/{{ item.user }}/resolver_error.log"
+     access_log: "/var/log/nginx/{{ item.user }}/resolver_access.log"
+     root: "/vagrant/resolver/"
+  notify:
+    - reload nginx
+  with_items: "{{ resolvers }}"
+
+# harden security
